@@ -22,7 +22,6 @@ public class WalletService {
     private final AveragePriceCryptoRepository averagePriceCryptoRepository;
     private final CoinCapService coinCapService;
 
-    // Constructor injection (Autowired can be omitted in Spring 4.3+ if only one constructor)
     @Autowired
     public WalletService(CryptoAssetRepository cryptoClientRepository,
                          AveragePriceCryptoRepository averagePriceCryptoRepository,
