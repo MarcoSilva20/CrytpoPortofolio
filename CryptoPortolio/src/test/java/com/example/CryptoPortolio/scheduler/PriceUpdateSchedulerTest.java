@@ -1,40 +1,68 @@
 package com.example.CryptoPortolio.scheduler;
 
-import com.example.CryptoPortolio.apiClient.CoinCapService;
-import com.example.CryptoPortolio.model.AveragePrice;
-import com.example.CryptoPortolio.model.CoinCapModel.CoinCapResponse;
-import com.example.CryptoPortolio.repository.AveragePriceCryptoRepository;
 import com.example.CryptoPortolio.service.PriceUpdateTask;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.Collections;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
-public class PriceUpdateSchedulerTest {
+class PriceUpdateSchedulerTest {
 
     @Mock
-    private CoinCapService coinCapService;
-
-    @Mock
-    private AveragePriceCryptoRepository averagePriceCryptoRepository;
-
-    @InjectMocks
     private PriceUpdateTask priceUpdateTask;
 
+    private ScheduledExecutorService executorService;
+
+    private PriceUpdateScheduler scheduler;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         MockitoAnnotations.openMocks(this);
+        executorService = Executors.newSingleThreadScheduledExecutor();
+        scheduler = new PriceUpdateScheduler(priceUpdateTask, executorService);
     }
 
     @Test
-    void testGetCurrentPrices() throws Exception {
+    void testUpdateFrequency() throws InterruptedException {
+        long clientId = 1L;
+        long frequencyMs = 1000L;
 
+        scheduler.updateFrequency(clientId, frequencyMs);
+
+        TimeUnit.MILLISECONDS.sleep(1500);
+
+        verify(priceUpdateTask, atLeastOnce()).getCurrentPrices(clientId);
     }
+
+    @Test
+    void testUpdateFrequency_InvalidFrequency() {
+        long clientId = 1L;
+
+        scheduler.updateFrequency(clientId, null);
+
+        verify(priceUpdateTask, never()).getCurrentPrices(anyLong());
+    }
+
+    @Test
+    void testRescheduleTask() throws InterruptedException {
+        long clientId = 1L;
+
+        scheduler.updateFrequency(clientId, 1000L);
+        TimeUnit.MILLISECONDS.sleep(1500);
+        verify(priceUpdateTask, atLeastOnce()).getCurrentPrices(clientId);
+
+        reset(priceUpdateTask);
+
+        scheduler.updateFrequency(clientId, 500L);
+        TimeUnit.MILLISECONDS.sleep(600);
+
+        verify(priceUpdateTask, atLeastOnce()).getCurrentPrices(clientId);
+    }
+
 }
